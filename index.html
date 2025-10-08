@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Coke Can Bash!</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fff8f6;
+    --ring:#e82127;
+    --text:#e82127;
+    --muted:#b2b2b2;
+    --splash:#fff8f6;
+    --coke-script:'Pacifico', cursive;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:grid;
+  min-height:100dvh;
+  place-items:center;
+  }
+  .wrap{
+  width:min(800px,94vw);
+  padding:18px 16px 24px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 32px #e8212715;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .stat{
+    display:flex; align-items:center; gap:8px;
+    font-weight:700; letter-spacing:.3px;
+  }
+  #title{
+  font-size:clamp(32px,6vw,64px);
+  font-family: var(--coke-script);
+  font-weight:400;
+  text-align:center;
+  flex:1;
+  color: #e82127;
+  text-shadow: 2px 2px 0 #fff, 0 0 8px #e8212733;
+  }
+  button{
+  background:var(--ring);
+  color:#fff;
+  border:0;
+  font-weight:800;
+  padding:12px 20px;
+  border-radius:24px;
+  cursor:pointer;
+  font-family: var(--coke-script);
+  font-size:1.1em;
+  letter-spacing:1px;
+  transition:transform .06s ease, box-shadow .12s ease;
+  box-shadow:0 4px 0 #b71c1c;
+  }
+  button:active{ transform:translateY(1px); box-shadow:0 3px 0 #5ea65e; }
+  button:active{ transform:translateY(1px); box-shadow:0 3px 0 #b71c1c; }
+  button[disabled]{ opacity:.55; cursor:not-allowed; box-shadow:none; }
+
+  /* Board */
+  .board{
+  margin:10px auto 0;
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:22px;
+  }
+  .hole{
+  aspect-ratio:1/1;
+  border:4px solid var(--ring);
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  position:relative;
+  overflow:visible;
+  user-select:none;
+  background: #fff8f6;
+  box-shadow: 0 2px 12px #e8212711;
+  }
+  .hole:after{
+    /* soft glow ring */
+    content:"";
+    position:absolute; inset:-6px;
+    border-radius:inherit;
+  box-shadow:0 0 0 2px #e82127 inset, 0 0 18px #e8212733 inset;
+    pointer-events:none;
+  }
+
+  /* Can (SVG wrapper) */
+  .can, .splash { position:absolute; width:70%; height:70%; display:block; }
+  .pop-in{ animation:pop .18s cubic-bezier(.42,1.5,.58,1) both; }
+  @keyframes pop{ from{ transform:scale(.4); opacity:.2 } to{ transform:scale(1.05); opacity:1 } }
+
+  /* Splash effect */
+  .splash{
+  filter:drop-shadow(0 0 6px #e82127);
+  animation:splish .32s cubic-bezier(.42,1.5,.58,1) both;
+  }
+  @keyframes splish{
+  from{ transform:scale(.4) rotate(-8deg); opacity:.6 }
+  to{ transform:scale(1.12) rotate(4deg); opacity:1 }
+  }
+
+  /* Overlay at end */
+  .overlay{
+    position:fixed; inset:0;
+    display:none; place-items:center;
+  background:rgba(232,33,39,.85);
+  }
+  .overlay.show{ display:grid; }
+  .card{
+  background:#fff8f6; color:var(--ring);
+  padding:28px; border:3px solid var(--ring);
+  border-radius:24px; width:min(440px,92vw);
+  text-align:center;
+  font-family: var(--coke-script);
+  }
+  .card h2{ margin:0 0 6px }
+  .card p{ margin:8px 0 16px; color:var(--muted) }
+  .legend{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    font-size:12px; color:var(--muted); margin-top:8px
+  }
+  .pill{
+    display:inline-grid; grid-auto-flow:column; gap:6px; align-items:center;
+  background:#fff8f6; border:1px solid #e82127; padding:6px 10px; border-radius:999px;
+  color: #e82127;
+  font-family: var(--coke-script);
+  }
+  .mini{
+  width:16px; height:16px; border-radius:8px; display:inline-block;
+  border:1px solid #e82127;
+  }
+
+  @media (max-width:560px){
+    .board{ gap:14px }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="stat">Score: <span id="score">0</span></div>
+      <div id="title">COKE CAN BASH!</div>
+      <div class="stat">⏱ <span id="time">10</span>s</div>
+    </header>
+
+    <div class="board" id="board" aria-label="Game board">
+      <!-- 12 holes -->
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span class="pill"><span class="mini" style="background:#e82127"></span>Classic</span>
+      <span class="pill"><span class="mini" style="background:#a0a7ad"></span>Diet</span>
+      <span class="pill"><span class="mini" style="background:#951c7a"></span>Cherry</span>
+      <span class="pill"><span class="mini" style="background:#121212"></span>Zero</span>
+      <span class="pill"><span class="mini" style="background:var(--splash)"></span>Splash</span>
+    </div>
+
+    <div style="display:flex; justify-content:center; margin-top:16px">
+      <button id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true">
+    <div class="card">
+      <h2>Time!</h2>
+      <p>Your final score: <strong id="finalScore">0</strong></p>
+      <button id="againBtn">Play Again</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const board = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const timeEl  = document.getElementById('time');
+  const startBtn= document.getElementById('startBtn');
+  const overlay = document.getElementById('overlay');
+  const finalScoreEl = document.getElementById('finalScore');
+  const againBtn = document.getElementById('againBtn');
+
+  // Build 12 holes
+  const HOLES = 12;
+  const holes = [];
+  for (let i=0;i<HOLES;i++){
+    const d = document.createElement('button');
+    d.className = 'hole';
+    d.setAttribute('aria-label','hole ' + (i+1));
+    d.dataset.state = 'empty';
+    d.disabled = true; // enabled during play
+    board.appendChild(d);
+    holes.push(d);
+  }
+
+  // Flavor definitions
+  const FLAVORS = [
+    { name:'Classic', color:'#e82127', text:'COKE', isObstacle: false },
+    { name:'Diet',    color:'#a0a7ad', text:'DIET', isObstacle: false },
+    { name:'Cherry',  color:'#951c7a', text:'CHERRY', isObstacle: false },
+    { name:'Zero',    color:'#121212', text:'ZERO', textColor:'#d8d8d8', isObstacle: false },
+  ];
+  // Obstacle cans
+  const OBSTACLE_FLAVORS = [
+    { name:'Sprite', color:'#7ed957', text:'SPRITE', isObstacle: true },
+    { name:'Doctor Pepper', color:'#8b2323', text:'DR PEPPER', isObstacle: true },
+    { name:'Fanta', color:'#ff9800', text:'FANTA', isObstacle: true },
+  ];
+
+  // State
+  let score=0, timeLeft=10, playing=false;
+  let countdownTimer=null, spawners=[];
+  const rng = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
+
+  function canSVG(flavor){
+    if (flavor.name === 'Classic') {
+      return `<img src='IMG/image.png' alt='Coca-Cola Can' class='can pop-in' style='width:100%;height:100%;object-fit:contain;' />`;
+    }
+    const textColor = flavor.textColor || '#ffffff';
+    return `
+      <svg class="can pop-in" viewBox="0 0 100 160" aria-label="${flavor.name} can" role="img">
+        <defs>
+          <linearGradient id="g${flavor.text}" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff15"/>
+            <stop offset="100%" stop-color="#00000040"/>
+          </linearGradient>
+        </defs>
+        <!-- can body -->
+        <rect x="18" y="8" rx="10" ry="10" width="64" height="144" fill="${flavor.color}" stroke="#00000066" stroke-width="2"/>
+        <rect x="20" y="10" rx="8" ry="8" width="60" height="140" fill="url(#g${flavor.text})"/>
+        <!-- top tab -->
+        <ellipse cx="50" cy="12" rx="24" ry="6" fill="#c9c9c9" />
+        <!-- label -->
+        <g font-family="Impact, system-ui, sans-serif" font-weight="900" text-anchor="middle">
+          <text x="50" y="88" font-size="24" fill="${textColor}" style="letter-spacing:1px">${flavor.text}</text>
+        </g>
+      </svg>`;
+  }
+
+  function splashSVG(){
+    return `
+      <svg class="splash" viewBox="0 0 140 140" aria-label="Splash!" role="img">
+        <g fill="var(--splash)" stroke="#2c6b2c" stroke-width="2">
+          <circle cx="70" cy="70" r="24"/>
+          <circle cx="20" cy="70" r="10"/>
+          <circle cx="120" cy="70" r="10"/>
+          <circle cx="70" cy="20" r="10"/>
+          <circle cx="70" cy="120" r="10"/>
+          <circle cx="30" cy="30" r="8"/>
+          <circle cx="110" cy="30" r="8"/>
+          <circle cx="30" cy="110" r="8"/>
+          <circle cx="110" cy="110" r="8"/>
+        </g>
+      </svg>`;
+  }
+
+  function clearHole(hole){
+    hole.innerHTML='';
+    hole.dataset.state='empty';
+  }
+
+  function showSplash(hole){
+    hole.innerHTML = splashSVG();
+    hole.dataset.state='splash';
+    setTimeout(()=> { clearHole(hole); }, 250);
+  }
+
+  function spawnOnce(){
+    if(!playing) return;
+    // choose a free hole
+    const free = holes.filter(h=>h.dataset.state==='empty');
+    if(free.length===0){ scheduleNext(); return; }
+    const hole = free[rng(0, free.length-1)];
+    // Randomly decide if this spawn is an obstacle (20% chance)
+    const isObstacle = Math.random() < 0.2;
+    let flavor;
+    if (isObstacle) {
+      flavor = OBSTACLE_FLAVORS[rng(0, OBSTACLE_FLAVORS.length-1)];
+      hole.dataset.state = 'obstacle';
+    } else {
+      flavor = FLAVORS[rng(0, FLAVORS.length-1)];
+      hole.dataset.state = 'can';
+    }
+    hole.innerHTML = canSVG(flavor);
+
+    const onClick = (ev) => {
+      if (!playing) return;
+      if (hole.dataset.state === 'can') {
+        score++;
+        scoreEl.textContent = score;
+        showSplash(hole);
+      } else if (hole.dataset.state === 'obstacle') {
+        score -= 50;
+        if (score < 0) score = 0;
+        scoreEl.textContent = score;
+        showSplash(hole);
+      }
+    };
+    hole.onclick = onClick;
+
+    // auto hide after random time
+    const stay = rng(900, 1800); // ms
+    const hideTimer = setTimeout(() => {
+      if (hole.dataset.state === 'can' || hole.dataset.state === 'obstacle') clearHole(hole);
+    }, stay);
+
+    // schedule next spawn at a random interval
+    scheduleNext();
+  }
+
+  function scheduleNext(){
+    if(!playing) return;
+  const delay = rng(600, 1200); // ms between spawns
+    spawners.push(setTimeout(spawnOnce, delay));
+  }
+
+  function startGame(){
+    // reset state
+    score=0; scoreEl.textContent=score;
+    timeLeft=10; timeEl.textContent=timeLeft;
+    playing=true;
+    holes.forEach(h=>{ clearHole(h); h.disabled=false; });
+    startBtn.disabled=true;
+
+    // countdown
+    countdownTimer = setInterval(()=>{
+      if(!playing) return;
+      timeLeft--;
+      timeEl.textContent=timeLeft;
+      if(timeLeft<=0) endGame();
+    }, 1000);
+
+    // kick off spawns (multiple rolling timeouts)
+    for(let i=0;i<3;i++) scheduleNext(); // a few parallel spawners keeps it lively
+  }
+
+  function endGame(){
+    if(!playing) return;
+    playing=false;
+    startBtn.disabled=false;
+    holes.forEach(h=>{ h.disabled=true; h.onclick=null; });
+    spawners.forEach(id=>clearTimeout(id));
+    spawners.length=0;
+    clearInterval(countdownTimer);
+
+    // clear board visuals
+    holes.forEach(clearHole);
+
+    finalScoreEl.textContent = score;
+    overlay.classList.add('show');
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    overlay.classList.remove('show');
+    startGame();
+  });
+  againBtn.addEventListener('click', ()=>{
+    overlay.classList.remove('show');
+    startGame();
+  });
+})();
+</script>
+</body>
+</html>
